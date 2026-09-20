@@ -81,7 +81,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base sm:text-lg font-bold tracking-tight text-white">
-                CryptoBot <span className="text-emerald-400 font-mono">50 USDT</span>
+                CryptoBot <span className="text-emerald-400 font-mono">$7.40</span>
               </h1>
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-800/60">
                 <ShieldCheck className="w-3 h-3 mr-1 text-emerald-400" />

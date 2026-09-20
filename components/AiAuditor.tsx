@@ -27,7 +27,7 @@ export const AiAuditor: React.FC<AiAuditorProps> = ({ settings, currentPrice }) 
           strategy: settings.strategy,
           symbol: settings.symbol,
           currentPrice,
-          startingCapital: 50,
+          startingCapital: settings.initialBalance || 7.4,
           orderSize: settings.orderSizeUsdt,
           takeProfitPct: settings.takeProfitPct,
           stopLossPct: settings.stopLossPct,
@@ -68,7 +68,7 @@ export const AiAuditor: React.FC<AiAuditorProps> = ({ settings, currentPrice }) 
             <div>
               <h2 className="text-lg font-bold text-white">AI Quantitative Strategy Auditor</h2>
               <p className="text-xs text-slate-300">
-                Audits your 50 USDT bot settings against live market conditions, fee friction, and exchange rules.
+                Audits your $7.40 bot settings against live market conditions, fee friction, and exchange rules.
               </p>
             </div>
           </div>
@@ -93,7 +93,7 @@ export const AiAuditor: React.FC<AiAuditorProps> = ({ settings, currentPrice }) 
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 flex items-center gap-2">
         <input
           type="text"
-          placeholder="Ask AI anything about your 50 USDT bot (e.g., 'Is SOL or BTC better for a $50 grid?')"
+          placeholder="Ask AI anything about your $7.40 bot (e.g., 'Is SOL or BTC better for a $7.40 micro-grid?')"
           value={userQuestion}
           onChange={(e) => setUserQuestion(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && runAudit(userQuestion)}
@@ -155,7 +155,7 @@ export const AiAuditor: React.FC<AiAuditorProps> = ({ settings, currentPrice }) 
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-xs">
             <h4 className="font-bold text-slate-200 mb-1 flex items-center gap-1.5">
               <AlertTriangle className="w-4 h-4 text-amber-400" />
-              Fee Drag Analysis on $50 USDT
+              Fee Drag Analysis on Micro-Capital (${settings.initialBalance || 7.4} USDT)
             </h4>
             <p className="text-slate-400 leading-relaxed font-mono">
               {audit.feeImpactExplanation}
@@ -184,7 +184,7 @@ export const AiAuditor: React.FC<AiAuditorProps> = ({ settings, currentPrice }) 
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
               <h4 className="font-bold text-rose-300 mb-2 flex items-center gap-1.5">
                 <ShieldAlert className="w-4 h-4 text-rose-400" />
-                Vulnerabilities for $50 Balance
+                Vulnerabilities for Micro-Capital (${settings.initialBalance || 7.4} USDT)
               </h4>
               <ul className="space-y-1.5 text-slate-300">
                 {audit.criticalRisks.map((r, i) => (
@@ -225,7 +225,7 @@ export const AiAuditor: React.FC<AiAuditorProps> = ({ settings, currentPrice }) 
           <Sparkles className="w-12 h-12 text-teal-400/40 mx-auto mb-3" />
           <h3 className="text-base font-bold text-white mb-1">Ready to Audit Your Bot Setup</h3>
           <p className="text-xs text-slate-400 max-w-md mx-auto mb-4">
-            Click the button above to run our AI quantitative model on your 50 USDT strategy parameters ({settings.strategy} on {settings.symbol}).
+            Click the button above to run our AI quantitative model on your $7.40 strategy parameters ({settings.strategy} on {settings.symbol}).
           </p>
           <button
             id="run-ai-audit-cta-btn"

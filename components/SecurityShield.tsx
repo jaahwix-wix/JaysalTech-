@@ -34,7 +34,7 @@ export const SecurityShield: React.FC = () => {
             <div>
               <h2 className="text-lg font-bold text-white">Bot Security Shield &amp; Anti-Scam Guide</h2>
               <p className="text-xs text-slate-300">
-                Protecting your 50 USDT from phishing, withdrawal drainers, and fake bot schemes.
+                Protecting your $7.40 capital from phishing, withdrawal drainers, and fake bot schemes.
               </p>
             </div>
           </div>
@@ -134,7 +134,7 @@ export const SecurityShield: React.FC = () => {
             <XCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
             <div>
               <strong className="block text-rose-300">CRITICAL VULNERABILITY: Withdrawals Enabled!</strong>
-              A legitimate trading bot NEVER needs withdrawal permission. If you enable this, any compromised server or malicious script can steal your 50 USDT instantly. Keep withdrawals STRICTLY UNCHECKED!
+              A legitimate trading bot NEVER needs withdrawal permission. If you enable this, any compromised server or malicious script can steal your $7.40 instantly. Keep withdrawals STRICTLY UNCHECKED!
             </div>
           </div>
         ) : isConfigSecure ? (
@@ -156,7 +156,7 @@ export const SecurityShield: React.FC = () => {
         )}
       </div>
 
-      {/* 3 Vital Anti-Scam Rules for 50 USDT Traders */}
+      {/* 3 Vital Anti-Scam Rules for $7.40 Traders */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
         {/* Scam #1 */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
@@ -166,10 +166,10 @@ export const SecurityShield: React.FC = () => {
               <span>1. Telegram &quot;Doubling&quot; Bots</span>
             </div>
             <p className="text-slate-300 leading-relaxed">
-              <strong>The Trap:</strong> Channels promise: <em>&quot;Deposit 50 USDT to this automated AI bot wallet and receive 5 USDT daily profit.&quot;</em>
+              <strong>The Trap:</strong> Channels promise: <em>&quot;Deposit $7.40 or $50 to this automated AI bot wallet and receive guaranteed daily profit.&quot;</em>
             </p>
             <p className="text-slate-400 mt-2 leading-relaxed">
-              <strong>The Reality:</strong> This is a 100% Ponzi exit scam. Once you send USDT to their address, you will never get it back.
+              <strong>The Reality:</strong> This is a 100% Ponzi exit scam. Once you send funds to their external address, you will never get them back.
             </p>
           </div>
           <div className="mt-3 text-[10px] text-emerald-400 font-mono font-semibold">
@@ -185,14 +185,14 @@ export const SecurityShield: React.FC = () => {
               <span>2. High-Gas On-Chain DEX Bots</span>
             </div>
             <p className="text-slate-300 leading-relaxed">
-              <strong>The Trap:</strong> Running Uniswap / Ethereum meme-coin bots with 50 USDT.
+              <strong>The Trap:</strong> Running Uniswap / Ethereum meme-coin bots with micro-capital ($7.40).
             </p>
             <p className="text-slate-400 mt-2 leading-relaxed">
-              <strong>The Reality:</strong> Ethereum gas fees ($5 - $15 per swap) and honeypot token taxes (99% sell fee) will completely evaporate $50 in just 2 transactions.
+              <strong>The Reality:</strong> Ethereum gas fees ($5 - $15 per swap) and honeypot token taxes (99% sell fee) will instantly evaporate $7.40 in a single transaction.
             </p>
           </div>
           <div className="mt-3 text-[10px] text-emerald-400 font-mono font-semibold">
-            Rule: Stick to CEX Spot (Binance, Bybit) with 0.1% fees on 50 USDT.
+            Rule: Stick to CEX Spot (BingX, Binance) with 0.1% fees on micro-capital.
           </div>
         </div>
 
@@ -220,7 +220,7 @@ export const SecurityShield: React.FC = () => {
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
         <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
           <HelpCircle className="w-4 h-4 text-emerald-400" />
-          Major Exchange Minimum Order Sizes for 50 USDT Traders
+          Major Exchange Minimum Order Sizes for $7.40 Micro-Traders
         </h3>
 
         <div className="overflow-x-auto">
@@ -230,37 +230,47 @@ export const SecurityShield: React.FC = () => {
                 <th className="pb-2">Exchange</th>
                 <th className="pb-2">Min Spot Order</th>
                 <th className="pb-2">Base Spot Fee</th>
-                <th className="pb-2">50 USDT Max Grids</th>
+                <th className="pb-2">$7.40 Max Grids</th>
                 <th className="pb-2">Security Rating</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 text-slate-300">
+              <tr className="hover:bg-slate-800/40 bg-emerald-950/20">
+                <td className="py-2.5 font-bold text-emerald-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  BingX
+                </td>
+                <td className="py-2.5 text-emerald-400 font-bold">$1.00 - $2.00</td>
+                <td className="py-2.5">0.10% (0.05% with VST/VIP)</td>
+                <td className="py-2.5 text-emerald-300 font-bold">3 - 5 grids ($1.5-$2.0/ea)</td>
+                <td className="py-2.5 text-emerald-400">★★★★★ (Active Live API)</td>
+              </tr>
               <tr className="hover:bg-slate-800/40">
                 <td className="py-2.5 font-bold text-white">Binance</td>
                 <td className="py-2.5 text-emerald-400 font-bold">$5.00 USDT</td>
                 <td className="py-2.5">0.10% (0.075% with BNB)</td>
-                <td className="py-2.5">5 - 10 grids</td>
+                <td className="py-2.5">1 order ($5 minimum)</td>
                 <td className="py-2.5 text-emerald-400">★★★★★ (Tier 1)</td>
               </tr>
               <tr className="hover:bg-slate-800/40">
                 <td className="py-2.5 font-bold text-white">Bybit</td>
                 <td className="py-2.5 text-emerald-400 font-bold">$1.00 - $5.00</td>
                 <td className="py-2.5">0.10%</td>
-                <td className="py-2.5">5 - 10 grids</td>
+                <td className="py-2.5">3 - 5 grids</td>
                 <td className="py-2.5 text-emerald-400">★★★★★ (Tier 1)</td>
               </tr>
               <tr className="hover:bg-slate-800/40">
                 <td className="py-2.5 font-bold text-white">OKX</td>
                 <td className="py-2.5 text-emerald-400 font-bold">$1.00 - $5.00</td>
                 <td className="py-2.5">0.08% maker / 0.10% taker</td>
-                <td className="py-2.5">5 - 10 grids</td>
+                <td className="py-2.5">3 - 5 grids</td>
                 <td className="py-2.5 text-emerald-400">★★★★★ (Tier 1)</td>
               </tr>
               <tr className="hover:bg-slate-800/40">
                 <td className="py-2.5 font-bold text-white">KuCoin</td>
                 <td className="py-2.5 text-emerald-400 font-bold">$1.00 - $5.00</td>
                 <td className="py-2.5">0.10%</td>
-                <td className="py-2.5">5 - 10 grids</td>
+                <td className="py-2.5">3 - 5 grids</td>
                 <td className="py-2.5 text-teal-400">★★★★☆ (Tier 1)</td>
               </tr>
             </tbody>

@@ -23,8 +23,8 @@ export type StrategyType = 'GRID' | 'DCA' | 'RSI_REVERSAL' | 'SCALP_PRO';
 export interface BotSettings {
   strategy: StrategyType;
   symbol: SymbolPair;
-  initialBalance: number; // e.g. 50 USDT
-  orderSizeUsdt: number;  // e.g. 10 USDT per tranche
+  initialBalance: number; // e.g. 7.40 USDT
+  orderSizeUsdt: number;  // e.g. 2.0 USDT per tranche
   takeProfitPct: number;  // e.g. 2.5%
   stopLossPct: number;    // e.g. 2.0%
   gridLevels: number;     // e.g. 5

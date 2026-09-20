@@ -125,7 +125,7 @@ export const TradeLedger: React.FC<TradeLedgerProps> = ({ botState }) => {
           {filteredHistory.length === 0 ? (
             <div className="text-center py-10 text-slate-400 text-xs">
               <History className="w-8 h-8 mx-auto mb-2 text-slate-600 opacity-50" />
-              <span>No orders executed yet. Click &quot;Start 50 USDT Bot&quot; to begin simulation.</span>
+              <span>No orders executed yet. Click &quot;Start $7.40 Bot&quot; to begin simulation.</span>
             </div>
           ) : (
             <table className="w-full text-left text-xs font-mono">

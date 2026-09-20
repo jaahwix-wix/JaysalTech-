@@ -36,6 +36,12 @@ interface ExchangeStatusResponse {
   canTrade?: boolean;
   canWithdraw?: boolean;
   spotUsdtBalance?: number;
+  spotBtcBalance?: number;
+  spotTotalUsdValue?: number;
+  perpUsdtBalance?: number;
+  totalUsdtBalance?: number;
+  accountType?: string;
+  spotAssets?: Array<{ asset: string; free: number; usdValue: number }>;
   checklist?: Array<{ title: string; desc: string; done: boolean }>;
 }
 
@@ -132,7 +138,7 @@ export const GoLiveGateway: React.FC<GoLiveGatewayProps> = ({
               Go Live: Web Deployment &amp; Exchange Trading
             </h2>
             <p className="text-slate-400 text-sm leading-relaxed">
-              Your algorithmic trading bot is currently hosted and accessible live on the web. Follow the instructions below to access your live web link or connect your 50 USDT spot account to a cryptocurrency exchange.
+              Your algorithmic trading bot is currently hosted and accessible live on the web. Follow the instructions below to access your live web link or connect your $7.40 spot account to a cryptocurrency exchange.
             </p>
           </div>
 
@@ -335,15 +341,42 @@ export const GoLiveGateway: React.FC<GoLiveGatewayProps> = ({
               {exchangeStatus?.message || 'Ready to check status.'}
             </div>
 
-            {exchangeStatus?.spotUsdtBalance !== undefined && exchangeStatus.spotUsdtBalance > 0 && (
-              <div className="flex items-center justify-between bg-emerald-950/40 border border-emerald-800/60 rounded-xl p-3 text-xs">
-                <span className="text-emerald-300 font-semibold flex items-center gap-1.5">
-                  <Coins className="w-4 h-4 text-emerald-400" />
-                  Live Spot Wallet Balance:
-                </span>
-                <span className="font-mono font-bold text-sm text-white">
-                  ${exchangeStatus.spotUsdtBalance.toFixed(2)} USDT
-                </span>
+            {/* Multi-Wallet Balances Breakdown */}
+            {exchangeStatus?.status === 'CONNECTED_LIVE' && (
+              <div className="space-y-2.5 pt-1">
+                {/* Spot Wallet Card */}
+                <div className="bg-emerald-950/40 border border-emerald-800/60 rounded-xl p-3 text-xs space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-emerald-300 font-bold flex items-center gap-1.5">
+                      <Coins className="w-4 h-4 text-emerald-400" />
+                      Live Spot Wallet Equity:
+                    </span>
+                    <span className="font-mono font-black text-base text-white">
+                      ${(exchangeStatus.spotTotalUsdValue ?? exchangeStatus.spotUsdtBalance ?? 0).toFixed(2)} USD
+                    </span>
+                  </div>
+                  {exchangeStatus.spotBtcBalance !== undefined && exchangeStatus.spotBtcBalance > 0 && (
+                    <div className="flex items-center justify-between text-[11px] text-emerald-300/80 bg-slate-950/60 rounded-lg px-2.5 py-1.5 border border-emerald-900/40 font-mono">
+                      <span>Holding: {exchangeStatus.spotBtcBalance.toFixed(7)} BTC</span>
+                      <span className="text-emerald-400 font-bold">≈ ${(exchangeStatus.spotAssets?.find(a => a.asset === 'BTC')?.usdValue ?? 0).toFixed(2)} USD</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs">
+                    <div className="text-[10px] text-slate-400 uppercase font-mono">Perpetual Futures</div>
+                    <div className="font-mono font-bold text-slate-200 mt-0.5">
+                      ${(exchangeStatus.perpUsdtBalance ?? 0).toFixed(2)} USDT
+                    </div>
+                  </div>
+                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs">
+                    <div className="text-[10px] text-slate-400 uppercase font-mono">Total Live Net Worth</div>
+                    <div className="font-mono font-bold text-emerald-400 mt-0.5">
+                      ${(exchangeStatus.totalUsdtBalance ?? (exchangeStatus.spotTotalUsdValue ?? 0)).toFixed(2)} USD
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -354,7 +387,7 @@ export const GoLiveGateway: React.FC<GoLiveGatewayProps> = ({
                 { title: 'Create Exchange Account', desc: 'Create account on Binance or Bybit', done: false },
                 { title: 'Generate Spot API Key', desc: 'Read Info + Spot Trading. Withdrawals strictly OFF.', done: false },
                 { title: 'Inject EXCHANGE_API_KEY into Secrets', desc: 'Configure in AI Studio Settings menu', done: false },
-                { title: 'Deposit 50 USDT on Spot', desc: 'Keep on spot wallet for micro-orders', done: false },
+                { title: 'Hold $7.40 on Spot', desc: 'Keep on spot wallet for micro-orders', done: false },
               ]).map((item, idx) => (
                 <div key={idx} className="flex items-start gap-2.5 text-xs">
                   {item.done ? (
@@ -377,7 +410,7 @@ export const GoLiveGateway: React.FC<GoLiveGatewayProps> = ({
         </div>
       </div>
 
-      {/* Step-by-Step Security Guide for Connecting Real 50 USDT */}
+      {/* Step-by-Step Security Guide for Connecting Real $7.40 */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -389,7 +422,7 @@ export const GoLiveGateway: React.FC<GoLiveGatewayProps> = ({
                 The 3-Minute Safe API Connection Guide (Zero-Withdrawal Rule)
               </h3>
               <p className="text-xs text-slate-400">
-                How to trade your 50 USDT without ever giving access to your funds
+                How to trade your $7.40 without ever giving access to your funds
               </p>
             </div>
           </div>
@@ -460,6 +493,57 @@ export const GoLiveGateway: React.FC<GoLiveGatewayProps> = ({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Vercel Deployment Notice & 30-Second Fix Card */}
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-purple-950/80 border border-purple-800/60 flex items-center justify-center text-purple-400 font-black">
+            ▲
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-white">
+              Hosted on Vercel? Enable Your Live Balance in 30 Seconds
+            </h3>
+            <p className="text-xs text-slate-400">
+              Why your Vercel deployment does not show your balance yet and how to sync it
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-slate-950 border border-slate-800/80 rounded-2xl p-5 space-y-4 text-xs">
+          <p className="text-slate-300 leading-relaxed">
+            When you deploy code to <strong>Vercel</strong>, Vercel creates a separate, isolated hosting container. It does <strong>not</strong> have access to your AI Studio secrets unless you paste them into your Vercel dashboard.
+          </p>
+
+          <div className="space-y-2">
+            <div className="font-bold text-slate-200">How to add your BingX keys to Vercel:</div>
+            <ol className="list-decimal list-inside space-y-1 text-slate-400">
+              <li>Go to <a href="https://vercel.com/dashboard" target="_blank" rel="noreferrer" className="text-blue-400 underline">vercel.com/dashboard</a> &gt; Click your project.</li>
+              <li>Navigate to <strong>Settings</strong> &gt; <strong>Environment Variables</strong>.</li>
+              <li>Add the following 3 variables:</li>
+            </ol>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 font-mono text-[11px] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-emerald-400">EXCHANGE_NAME</span>
+              <span className="text-slate-300">bingx</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-emerald-400">EXCHANGE_API_KEY</span>
+              <span className="text-slate-400">(Your BingX API Key)</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-emerald-400">EXCHANGE_API_SECRET</span>
+              <span className="text-slate-400">(Your BingX Secret Key)</span>
+            </div>
+          </div>
+
+          <p className="text-slate-400">
+            4. Click <strong>Deployments</strong> tab in Vercel &gt; Click the 3 dots on your latest build &gt; Select <strong>Redeploy</strong>. Your real BingX Perpetual balance will show up immediately!
+          </p>
+        </div>
       </div>
 
       {/* Emergency Spot Kill-Switch & Capital Protection */}

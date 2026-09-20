@@ -108,9 +108,9 @@ export const PortfolioStats: React.FC<PortfolioStatsProps> = ({
           </div>
         </div>
         <div className="text-[10px] text-slate-400 border-t border-slate-800/80 pt-1.5 mt-2 flex justify-between">
-          <span>Fee drag on $50:</span>
+          <span>Fee drag on ${settings.initialBalance.toFixed(2)}:</span>
           <span className="text-amber-300 font-mono">
-            {((botState.totalFeesPaid / settings.initialBalance) * 100).toFixed(2)}%
+            {((botState.totalFeesPaid / (settings.initialBalance || 7.4)) * 100).toFixed(2)}%
           </span>
         </div>
       </div>

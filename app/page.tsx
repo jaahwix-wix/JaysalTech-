@@ -25,11 +25,11 @@ import { Bell, Sparkles, CheckCircle2, AlertTriangle, ShieldCheck, Zap } from 'l
 const DEFAULT_SETTINGS: BotSettings = {
   strategy: 'GRID',
   symbol: 'SOLUSDT',
-  initialBalance: 50.0,
-  orderSizeUsdt: 10.0,
+  initialBalance: 7.4,
+  orderSizeUsdt: 2.0,
   takeProfitPct: 2.5,
   stopLossPct: 3.0,
-  gridLevels: 5,
+  gridLevels: 3,
   gridLowerPrice: 0,
   gridUpperPrice: 0,
   dipTriggerPct: 1.5,
@@ -42,7 +42,7 @@ const DEFAULT_SETTINGS: BotSettings = {
 
 const INITIAL_BOT_STATE: BotState = {
   status: 'STOPPED',
-  usdtBalance: 50.0,
+  usdtBalance: 7.4,
   cryptoBalance: 0,
   avgEntryPrice: 0,
   realizedPnl: 0,
@@ -178,7 +178,7 @@ export default function Home() {
 
     showToast(
       'Trading Bot Activated',
-      `Running ${settings.strategy} on ${settings.symbol} with $50.00 paper capital. Monitoring live ticks...`,
+      `Running ${settings.strategy} on ${settings.symbol} with $7.40 paper capital. Monitoring live ticks...`,
       'success'
     );
   };
@@ -193,10 +193,10 @@ export default function Home() {
   const handleResetBot = () => {
     setBotState({
       ...INITIAL_BOT_STATE,
-      usdtBalance: 50.0,
+      usdtBalance: 7.4,
       openGridOrders: [],
     });
-    showToast('Reset Complete', 'Wallet balance restored to exactly 50.00 USDT paper funds.', 'info');
+    showToast('Reset Complete', 'Wallet balance restored to exactly 7.40 USDT paper funds.', 'info');
   };
 
   // Interactive Stress-Test Wave Simulation
@@ -380,7 +380,7 @@ export default function Home() {
             <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 border border-slate-800/80 px-4 py-3 rounded-2xl">
               <div className="flex items-center gap-2 text-xs text-slate-400">
                 <Zap className="w-4 h-4 text-emerald-400" />
-                <span className="font-semibold text-slate-200">50 USDT Strategy Presets:</span>
+                <span className="font-semibold text-slate-200">$7.40 Strategy Presets:</span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <button
@@ -390,15 +390,15 @@ export default function Home() {
                     setSettings((p) => ({
                       ...p,
                       strategy: 'GRID',
-                      orderSizeUsdt: 10,
+                      orderSizeUsdt: 1.8,
                       takeProfitPct: 2.5,
-                      gridLevels: 5,
+                      gridLevels: 4,
                     }));
-                    showToast('Preset Loaded', 'Conservative SOL Grid ($10/order, 5 grids)', 'info');
+                    showToast('Preset Loaded', 'Conservative SOL Micro-Grid ($1.80/order, 4 grids)', 'info');
                   }}
                   className="px-3 py-1 rounded-lg text-xs font-mono bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-700 transition-colors"
                 >
-                  ⚡ Active SOL Grid (5 Grids)
+                  ⚡ Active SOL Grid (4 Grids)
                 </button>
                 <button
                   id="preset-btc-dca-btn"
@@ -407,11 +407,11 @@ export default function Home() {
                     setSettings((p) => ({
                       ...p,
                       strategy: 'DCA',
-                      orderSizeUsdt: 10,
+                      orderSizeUsdt: 2.0,
                       takeProfitPct: 3.0,
                       dipTriggerPct: 1.5,
                     }));
-                    showToast('Preset Loaded', 'Safe BTC Micro-DCA ($10 tranches on 1.5% dips)', 'info');
+                    showToast('Preset Loaded', 'Safe BTC Micro-DCA ($2.00 tranches on 1.5% dips)', 'info');
                   }}
                   className="px-3 py-1 rounded-lg text-xs font-mono bg-slate-800 hover:bg-slate-700 text-blue-300 border border-slate-700 transition-colors"
                 >
@@ -424,11 +424,11 @@ export default function Home() {
                     setSettings((p) => ({
                       ...p,
                       strategy: 'RSI_REVERSAL',
-                      orderSizeUsdt: 15,
+                      orderSizeUsdt: 2.5,
                       takeProfitPct: 3.5,
                       stopLossPct: 2.5,
                     }));
-                    showToast('Preset Loaded', 'ETH Oversold Reversal (RSI < 32 buy)', 'info');
+                    showToast('Preset Loaded', 'ETH Oversold Reversal (RSI < 32 buy, $2.50 order)', 'info');
                   }}
                   className="px-3 py-1 rounded-lg text-xs font-mono bg-slate-800 hover:bg-slate-700 text-purple-300 border border-slate-700 transition-colors"
                 >
@@ -441,13 +441,13 @@ export default function Home() {
                     setSettings((p) => ({
                       ...p,
                       strategy: 'SCALP_PRO',
-                      orderSizeUsdt: 10,
+                      orderSizeUsdt: 2.0,
                       takeProfitPct: 1.5,
                       stopLossPct: 1.0,
                       leverage: 3,
                     }));
                     setActiveTab('scalp');
-                    showToast('Preset Loaded', 'SOL Scalp Pro Momentum (EMA 9/21 cross, 3x lev)', 'info');
+                    showToast('Preset Loaded', 'SOL Scalp Pro Momentum (EMA 9/21 cross, 3x lev, $2.00 order)', 'info');
                   }}
                   className="px-3 py-1 rounded-lg text-xs font-mono bg-amber-950/80 hover:bg-amber-900/80 text-amber-300 border border-amber-600/60 transition-colors flex items-center gap-1 font-bold"
                 >
@@ -495,16 +495,16 @@ export default function Home() {
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-xs space-y-2 text-slate-300">
                   <div className="font-bold text-white flex items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    How this bot secures your 50 USDT:
+                    How this bot secures your $7.40 capital:
                   </div>
                   <p className="text-slate-400 leading-relaxed">
                     1. <strong>Spot Only (0x leverage):</strong> No liquidation wick can ever zero your account.
                   </p>
                   <p className="text-slate-400 leading-relaxed">
-                    2. <strong>Real Fee Deduction:</strong> Simulates Binance 0.1% fee on every order so you never see illusory profits.
+                    2. <strong>Real Fee Deduction:</strong> Simulates exchange 0.1% fee on every order so you never see illusory profits.
                   </p>
                   <p className="text-slate-400 leading-relaxed">
-                    3. <strong>$10 Tranche Sizing:</strong> Complies with real exchange minimum order thresholds.
+                    3. <strong>Micro-Tranche Sizing ($1.50 - $2.50):</strong> Staggers entries across multiple levels without exhausting micro-capital.
                   </p>
                 </div>
               </div>
@@ -569,7 +569,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-slate-900 bg-slate-950 py-4 text-center text-xs text-slate-500 font-mono">
         <div className="max-w-7xl mx-auto px-4 flex flex-wrap items-center justify-between gap-2">
-          <span>CryptoBot 50 USDT — Algorithmic Risk Management Simulator</span>
+          <span>CryptoBot $7.40 Capital — Algorithmic Risk Management Simulator</span>
           <span className="flex items-center gap-1 text-emerald-400/80">
             <ShieldCheck className="w-3.5 h-3.5" />
             Spot Non-Custodial Simulation

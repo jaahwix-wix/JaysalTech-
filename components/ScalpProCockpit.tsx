@@ -48,9 +48,31 @@ export const ScalpProCockpit: React.FC<ScalpProCockpitProps> = ({
   // Scalping parameters
   const [leverage, setLeverage] = useState<number>(settings.leverage || 1);
   const [scalpTargetDayPct, setScalpTargetDayPct] = useState<number>(100);
+  const [livePerpBalance, setLivePerpBalance] = useState<number | null>(null);
   const [orderBookTicks, setOrderBookTicks] = useState<
     Array<{ id: number; type: 'BUY' | 'SELL'; price: number; size: number; time: string }>
   >([]);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/exchange/status')
+      .then((r) => r.json())
+      .then((d) => {
+        if (!active) return;
+        if (d.status === 'CONNECTED_LIVE') {
+          const bal = (d.spotTotalUsdValue && d.spotTotalUsdValue > 0.5)
+            ? d.spotTotalUsdValue
+            : (d.perpUsdtBalance && d.perpUsdtBalance > 0.5)
+            ? d.perpUsdtBalance
+            : (d.totalUsdtBalance ?? null);
+          setLivePerpBalance(bal);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Calculate real-time indicators
   const closePrices = klines.map((k) => k.close);
@@ -104,7 +126,7 @@ export const ScalpProCockpit: React.FC<ScalpProCockpitProps> = ({
   const days = [1, 3, 5, 10, 15, 20, 30];
   const compoundValues = days.map((d) => ({
     day: d,
-    value: 50 * Math.pow(1 + scalpTargetDayPct / 100, d),
+    value: 7.4 * Math.pow(1 + scalpTargetDayPct / 100, d),
   }));
 
   // Liquidation drop distance for current leverage
@@ -133,6 +155,13 @@ export const ScalpProCockpit: React.FC<ScalpProCockpitProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {livePerpBalance !== null && (
+              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-xs font-mono text-emerald-300">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>BingX Equity:</span>
+                <span className="font-bold text-white">${livePerpBalance.toFixed(2)} USD</span>
+              </div>
+            )}
             <button
               id="scalp-activate-bot-btn"
               onClick={() => {
@@ -234,7 +263,7 @@ export const ScalpProCockpit: React.FC<ScalpProCockpitProps> = ({
                     Prop Firm Spot (1x)
                   </div>
                   <div className="text-[10px] text-slate-400 mt-1">
-                    Zero liquidation. 1.2% TP / 0.8% SL. Preserves $50.
+                    Zero liquidation. 1.2% TP / 0.8% SL. Preserves capital.
                   </div>
                 </button>
 
@@ -437,7 +466,7 @@ export const ScalpProCockpit: React.FC<ScalpProCockpitProps> = ({
               </h3>
             </div>
             <p className="text-xs text-slate-400 mt-1">
-              Why 100% a day is an impossible long-term mathematical fantasy, and what actually happens when you try it with 50 USDT.
+              Why 100% a day is an impossible long-term mathematical fantasy, and what actually happens when you try it with $7.40 capital.
             </p>
           </div>
           <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-rose-950 text-rose-300 border border-rose-800">
@@ -448,7 +477,7 @@ export const ScalpProCockpit: React.FC<ScalpProCockpitProps> = ({
         {/* The Absurd Compounding Table */}
         <div>
           <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-            The Math: If 100% a day were real, here is what happens to 50 USDT:
+            The Math: If 100% a day were real, here is what happens to $7.40:
           </h4>
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 font-mono text-center">
             {compoundValues.map((cv) => (
@@ -461,7 +490,7 @@ export const ScalpProCockpit: React.FC<ScalpProCockpitProps> = ({
             ))}
           </div>
           <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800/80 mt-2 text-xs text-slate-400 leading-relaxed font-mono">
-            ⚠️ <strong>The Proof:</strong> In just 30 days of &quot;100% a day&quot;, 50 USDT would compound to <strong>$53,687,091,200 ($53.6 Billion)</strong>. By Day 35, it would exceed the entire net worth of the world economy. Anyone promising you a bot that makes &quot;100% a day&quot; is either selling a scam, showing a fake simulator, or gambling on extreme leverage that blows up in hours.
+            ⚠️ <strong>The Proof:</strong> In just 30 days of &quot;100% a day&quot;, $7.40 would compound to <strong>$7,945,689,498 (~$7.95 Billion)</strong>. By Day 35, it would exceed hundreds of billions of dollars. Anyone promising you a bot that makes &quot;100% a day&quot; is either selling a scam, showing a fake simulator, or gambling on extreme leverage that blows up in hours.
           </div>
         </div>
 
@@ -478,7 +507,7 @@ export const ScalpProCockpit: React.FC<ScalpProCockpitProps> = ({
             <ul className="space-y-1.5 text-slate-300">
               <li className="flex items-start gap-1.5">
                 <span className="text-rose-400 font-bold">•</span>
-                <span>Requires 20x to 50x leverage on all 50 USDT capital.</span>
+                <span>Requires 20x to 50x leverage on all $7.40 capital.</span>
               </li>
               <li className="flex items-start gap-1.5">
                 <span className="text-rose-400 font-bold">•</span>

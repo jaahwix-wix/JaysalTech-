@@ -48,7 +48,7 @@ export const BotControlPanel: React.FC<BotControlPanelProps> = ({
       <div className="flex items-center justify-between border-b border-slate-800 pb-3">
         <div className="flex items-center gap-2">
           <Sliders className="w-5 h-5 text-emerald-400" />
-          <h2 className="text-base font-bold text-white">50 USDT Bot Configuration</h2>
+          <h2 className="text-base font-bold text-white">$7.40 Bot Configuration</h2>
         </div>
         <span className="text-xs px-2.5 py-1 rounded bg-slate-800 text-slate-300 font-mono flex items-center gap-1">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
@@ -161,9 +161,9 @@ export const BotControlPanel: React.FC<BotControlPanelProps> = ({
           <input
             id="input-order-size"
             type="range"
-            min="5"
-            max="25"
-            step="5"
+            min="1.0"
+            max="7.4"
+            step="0.5"
             value={settings.orderSizeUsdt}
             onChange={(e) =>
               setSettings((prev) => ({ ...prev, orderSizeUsdt: Number(e.target.value) }))
@@ -172,7 +172,7 @@ export const BotControlPanel: React.FC<BotControlPanelProps> = ({
           />
           <span className="text-[10px] text-slate-400 flex items-center gap-1 mt-1">
             <AlertCircle className="w-3 h-3 text-amber-400 shrink-0" />
-            Binance/Bybit min order is $5-$10.
+            Micro-tranche for $7.40 capital ({Math.floor(7.4 / (settings.orderSizeUsdt || 1))} orders)
           </span>
         </div>
 
@@ -223,7 +223,7 @@ export const BotControlPanel: React.FC<BotControlPanelProps> = ({
               className="w-full accent-emerald-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
             />
             <span className="text-[10px] text-slate-400 block mt-1">
-              Each grid: ${(50 / settings.gridLevels).toFixed(1)} capital allocation
+              Each grid: ${((settings.initialBalance || 7.4) / settings.gridLevels).toFixed(2)} capital allocation
             </span>
           </div>
         ) : settings.strategy === 'SCALP_PRO' ? (
@@ -304,7 +304,7 @@ export const BotControlPanel: React.FC<BotControlPanelProps> = ({
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/25"
             >
               <Play className="w-4 h-4 fill-slate-950" />
-              Start 50 USDT Bot
+              Start $7.40 Bot
             </button>
           )}
 
@@ -312,10 +312,10 @@ export const BotControlPanel: React.FC<BotControlPanelProps> = ({
             id="bot-reset-btn"
             onClick={onReset}
             className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-all border border-slate-700"
-            title="Reset Paper Balance to 50.00 USDT"
+            title="Reset Paper Balance to 7.40 USDT"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            Reset $50
+            Reset $7.40
           </button>
         </div>
 
