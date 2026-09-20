@@ -7,6 +7,7 @@ const SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'DOGEUSD
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const symbol = searchParams.get('symbol') || 'SOLUSDT';
+  const interval = searchParams.get('interval') || '5m';
 
   try {
     // 1. Fetch 24hr tickers for top pairs only (tiny payload)
@@ -27,10 +28,13 @@ export async function GET(req: Request) {
 
     const filteredTickers = rawTickers;
 
-    // 2. Fetch klines (recent candles, 15m) for the selected symbol
+    // 2. Fetch klines (recent 5m candles by default) for the selected symbol
     const activeSymbol = SYMBOLS.includes(symbol) ? symbol : 'SOLUSDT';
+    const validIntervals = ['1m', '5m', '15m', '1h', '4h', '1d'];
+    const activeInterval = validIntervals.includes(interval) ? interval : '5m';
+
     const klinesRes = await fetch(
-      `https://api.binance.com/api/v3/klines?symbol=${activeSymbol}&interval=15m&limit=30`,
+      `https://api.binance.com/api/v3/klines?symbol=${activeSymbol}&interval=${activeInterval}&limit=36`,
       { cache: 'no-store' }
     );
 
@@ -89,11 +93,12 @@ export async function GET(req: Request) {
 
     const target = fallbackPrices[symbol] || fallbackPrices['SOLUSDT'];
     const now = Date.now();
-    const fallbackKlines = Array.from({ length: 30 }).map((_, i) => {
-      const factor = 1 + (Math.sin(i / 3) * 0.015) + ((i - 15) * 0.001);
+    const intervalMinutes = interval === '1m' ? 1 : interval === '15m' ? 15 : interval === '1h' ? 60 : 5;
+    const fallbackKlines = Array.from({ length: 36 }).map((_, i) => {
+      const factor = 1 + (Math.sin(i / 3) * 0.015) + ((i - 18) * 0.001);
       const base = target.price * factor;
       return {
-        time: now - (30 - i) * 15 * 60 * 1000,
+        time: now - (36 - i) * intervalMinutes * 60 * 1000,
         open: base * 0.998,
         high: base * 1.006,
         low: base * 0.994,

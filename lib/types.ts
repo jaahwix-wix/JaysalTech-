@@ -24,15 +24,17 @@ export interface BotSettings {
   strategy: StrategyType;
   symbol: SymbolPair;
   initialBalance: number; // e.g. 7.40 USDT
-  orderSizeUsdt: number;  // e.g. 2.0 USDT per tranche
-  takeProfitPct: number;  // e.g. 2.5%
-  stopLossPct: number;    // e.g. 2.0%
-  gridLevels: number;     // e.g. 5
+  orderSizePct: number;   // e.g. 20 (always 20% of balance per trade)
+  orderSizeUsdt: number;  // e.g. 1.48 USDT per tranche (20% of $7.40)
+  takeProfitPct: number;  // e.g. 2.0%
+  stopLossPct: number;    // e.g. 1.5%
+  timeframe: '1m' | '5m' | '15m' | '1h'; // default 5m
+  gridLevels: number;     // e.g. 4
   gridLowerPrice: number;
   gridUpperPrice: number;
   dipTriggerPct: number;  // For DCA: buy on 1.5% dip
-  feePct: number;         // 0.1% standard Binance spot fee
-  leverage: number;       // 1x (Spot) up to 10x/20x (Futures simulation for risk education)
+  feePct: number;         // 0.1% standard spot fee
+  leverage: number;       // 1x (Spot) up to 10x/20x
   scalpEmaFast: number;   // Fast EMA (default 9)
   scalpEmaSlow: number;   // Slow EMA (default 21)
   scalpTrailingStop: boolean; // Trailing profit lock

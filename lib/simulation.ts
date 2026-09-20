@@ -47,13 +47,18 @@ export function generateGridOrders(
   settings: BotSettings,
   availableUsdt: number
 ): OpenGridOrder[] {
-  const { gridLevels, gridLowerPrice, gridUpperPrice, orderSizeUsdt } = settings;
+  const { gridLevels, gridLowerPrice, gridUpperPrice } = settings;
   const lower = gridLowerPrice > 0 ? gridLowerPrice : currentPrice * 0.96;
   const upper = gridUpperPrice > 0 ? gridUpperPrice : currentPrice * 1.04;
   const step = (upper - lower) / (gridLevels - 1);
 
+  // Dynamic 20% position size per trade or explicit setting
+  const orderSizePct = settings.orderSizePct ?? 20;
+  const calculatedTranche = Math.max(1.0, Number((availableUsdt * (orderSizePct / 100)).toFixed(2)));
+  const orderSizeUsdt = settings.orderSizeUsdt > 0 ? settings.orderSizeUsdt : calculatedTranche;
+
   const orders: OpenGridOrder[] = [];
-  const maxBuyOrders = Math.floor(availableUsdt / orderSizeUsdt);
+  const maxBuyOrders = Math.max(1, Math.floor(availableUsdt / orderSizeUsdt));
   let buyCount = 0;
 
   for (let i = 0; i < gridLevels; i++) {
@@ -97,7 +102,8 @@ export function executeBotTick(
 
   const {
     strategy,
-    orderSizeUsdt,
+    orderSizeUsdt: configuredOrderSize,
+    orderSizePct = 20,
     takeProfitPct,
     stopLossPct,
     feePct,
@@ -109,8 +115,12 @@ export function executeBotTick(
   let executedTrade: ExecutedOrder | null = null;
   const now = Date.now();
 
-  // 1. Check Stop-Loss if holding crypto
-  if (next.cryptoBalance > 0 && next.avgEntryPrice > 0 && stopLossPct > 0) {
+  // Dynamic order sizing: Always allocate 20% of current available balance for any trade (min $1.00)
+  const dynamicOrderSize = Math.max(1.0, Number((next.usdtBalance * (orderSizePct / 100)).toFixed(2)));
+  const orderSizeUsdt = configuredOrderSize > 0 ? configuredOrderSize : dynamicOrderSize;
+
+  // 1. Check Stop-Loss if holding crypto (Spot strategies)
+  if (strategy !== 'SCALP_PRO' && next.cryptoBalance > 0 && next.avgEntryPrice > 0 && stopLossPct > 0) {
     const dropPct = ((currentPrice - next.avgEntryPrice) / next.avgEntryPrice) * 100;
     if (dropPct <= -stopLossPct) {
       // Execute emergency STOP LOSS sell
@@ -150,8 +160,8 @@ export function executeBotTick(
     }
   }
 
-  // 2. Check Take-Profit if holding crypto
-  if (next.cryptoBalance > 0 && next.avgEntryPrice > 0) {
+  // 2. Check Take-Profit if holding crypto (Spot strategies)
+  if (strategy !== 'SCALP_PRO' && next.cryptoBalance > 0 && next.avgEntryPrice > 0) {
     const gainPct = ((currentPrice - next.avgEntryPrice) / next.avgEntryPrice) * 100;
     if (gainPct >= takeProfitPct) {
       // Execute TAKE PROFIT sell
@@ -495,8 +505,10 @@ export function executeBotTick(
     }
 
     // 2. Scalp Entry: Fast EMA > Slow EMA and not currently holding
-    if (isBullishCross && next.cryptoBalance === 0 && next.usdtBalance >= orderSizeUsdt) {
-      const marginAllocated = Math.min(orderSizeUsdt, next.usdtBalance);
+    // Allocate 20% of balance for trade
+    const scalpTradeAllocation = Math.min(next.usdtBalance, Math.max(1.0, Number((next.usdtBalance * (orderSizePct / 100)).toFixed(2))));
+    if (isBullishCross && next.cryptoBalance === 0 && next.usdtBalance >= 1.0) {
+      const marginAllocated = scalpTradeAllocation;
       const notionalSize = marginAllocated * lev;
       const fee = notionalSize * (feePct / 100);
       const coinBought = (notionalSize - fee) / currentPrice;
