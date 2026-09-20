@@ -17,7 +17,13 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Sparkles,
-  Info
+  Info,
+  LineChart,
+  Target,
+  CheckCircle2,
+  Compass,
+  Radio,
+  ChevronRight
 } from 'lucide-react';
 
 interface ScalpProCockpitProps {
@@ -82,6 +88,113 @@ export const ScalpProCockpit: React.FC<ScalpProCockpitProps> = ({
 
   const isEmaBullish = ema9 > ema21;
   const emaSpreadPct = ema21 > 0 ? ((ema9 - ema21) / ema21) * 100 : 0;
+
+  // Calculate historical RSI values for the last 10 candles (5m timeframe)
+  const historicalCandlesCount = 10;
+  const recentKlines = klines.length >= historicalCandlesCount
+    ? klines.slice(-historicalCandlesCount)
+    : klines;
+
+  const rsiHistory = recentKlines.map((candle, idx) => {
+    // Determine the slice index in the full klines array
+    const fullIndex = klines.length - recentKlines.length + idx;
+    const pricesUpToCandle = klines.slice(0, fullIndex + 1).map((k) => k.close);
+    const candleRsi = Number(calculateRsi(pricesUpToCandle, 14).toFixed(1));
+
+    // Calculate delta against previous candle if available
+    let prevRsi = candleRsi;
+    if (fullIndex > 0) {
+      const prevPrices = klines.slice(0, fullIndex).map((k) => k.close);
+      prevRsi = Number(calculateRsi(prevPrices, 14).toFixed(1));
+    }
+    const delta = Number((candleRsi - prevRsi).toFixed(1));
+
+    // Zone & Trade justification
+    let zone: 'OVERSOLD' | 'ACCUMULATION' | 'NEUTRAL' | 'MOMENTUM' | 'OVERBOUGHT';
+    let zoneLabel: string;
+    let zoneColor: string;
+    let badgeClass: string;
+    let signalClass: string;
+    let justification: string;
+
+    if (candleRsi <= 35) {
+      zone = 'OVERSOLD';
+      zoneLabel = 'Oversold Dip';
+      zoneColor = '#10b981'; // emerald
+      badgeClass = 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50';
+      signalClass = 'bg-emerald-500 text-slate-950 font-bold';
+      justification = 'Oversold Dip Reversal — Asymmetric 20% bounce scalp entry triggered';
+    } else if (candleRsi <= 45) {
+      zone = 'ACCUMULATION';
+      zoneLabel = 'Support Hook';
+      zoneColor = '#14b8a6'; // teal
+      badgeClass = 'bg-teal-950/80 text-teal-300 border-teal-500/50';
+      signalClass = 'bg-teal-500 text-slate-950 font-bold';
+      justification = 'Support Hook Confirmed — Low-risk mean-reversion scalp entry';
+    } else if (candleRsi <= 55) {
+      zone = 'NEUTRAL';
+      zoneLabel = 'Range Support';
+      zoneColor = '#06b6d4'; // cyan
+      badgeClass = 'bg-cyan-950/80 text-cyan-300 border-cyan-500/50';
+      signalClass = 'bg-cyan-500 text-slate-950 font-bold';
+      justification = 'Range Equilibrium — Micro-support bounce entry with +2.2% target';
+    } else if (candleRsi <= 68) {
+      zone = 'MOMENTUM';
+      zoneLabel = 'Bullish Impulse';
+      zoneColor = '#f59e0b'; // amber
+      badgeClass = 'bg-amber-950/80 text-amber-300 border-amber-500/50';
+      signalClass = 'bg-amber-500 text-slate-950 font-bold';
+      justification = 'Momentum Expansion — EMA 9 > 21 trend continuation entry justified';
+    } else {
+      zone = 'OVERBOUGHT';
+      zoneLabel = 'Overbought Warning';
+      zoneColor = '#f43f5e'; // rose
+      badgeClass = 'bg-rose-950/80 text-rose-300 border-rose-500/50';
+      signalClass = 'bg-rose-500 text-white font-bold';
+      justification = 'Exhaustion Band — Longs locked; Trailing profit lock armed';
+    }
+
+    const timeStr = new Date(candle.time).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const isCurrent = idx === recentKlines.length - 1;
+    const label = isCurrent ? 'NOW' : `t-${recentKlines.length - 1 - idx}`;
+
+    return {
+      index: idx,
+      label,
+      isCurrent,
+      time: timeStr,
+      close: candle.close,
+      open: candle.open,
+      isGreen: candle.close >= candle.open,
+      rsi: candleRsi,
+      prevRsi,
+      delta,
+      zone,
+      zoneLabel,
+      zoneColor,
+      badgeClass,
+      signalClass,
+      justification,
+    };
+  });
+
+  const [selectedCandleIndex, setSelectedCandleIndex] = useState<number | null>(null);
+  const activeCandle = selectedCandleIndex !== null && rsiHistory[selectedCandleIndex]
+    ? rsiHistory[selectedCandleIndex]
+    : rsiHistory[rsiHistory.length - 1] || null;
+
+  const minRsi10 = rsiHistory.length > 0 ? Math.min(...rsiHistory.map((p) => p.rsi)) : 50;
+  const maxRsi10 = rsiHistory.length > 0 ? Math.max(...rsiHistory.map((p) => p.rsi)) : 50;
+  const avgRsi10 = rsiHistory.length > 0
+    ? Number((rsiHistory.reduce((acc, p) => acc + p.rsi, 0) / rsiHistory.length).toFixed(1))
+    : 50;
+  const net10CandleChange = rsiHistory.length >= 2
+    ? Number((rsiHistory[rsiHistory.length - 1].rsi - rsiHistory[0].rsi).toFixed(1))
+    : 0;
 
   // Simulate fast order book tape
   useEffect(() => {
@@ -168,8 +281,10 @@ export const ScalpProCockpit: React.FC<ScalpProCockpitProps> = ({
                 setSettings((p) => ({
                   ...p,
                   strategy: 'SCALP_PRO',
-                  takeProfitPct: 1.5,
-                  stopLossPct: 1.0,
+                  orderSizePct: 20,
+                  takeProfitPct: 2.2,
+                  stopLossPct: 1.5,
+                  timeframe: '5m',
                   leverage,
                 }));
                 if (isRunning) onPauseBot();
@@ -188,6 +303,292 @@ export const ScalpProCockpit: React.FC<ScalpProCockpitProps> = ({
         </div>
       </div>
 
+      {/* Historical RSI Momentum Matrix (Last 10 Candles · 5m Timeframe) */}
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-emerald-950/80 border border-emerald-800/60 text-emerald-400">
+                <LineChart className="w-4 h-4" />
+              </div>
+              <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+                Historical RSI Momentum Matrix
+                <span className="text-xs font-mono font-normal text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-800/60">
+                  Last 10 Candles · 5m Scalp
+                </span>
+              </h3>
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Real-time 14-period RSI curve across the previous 10 5-minute candles to mathematically validate trade entries and prevent peak buys.
+            </p>
+          </div>
+
+          {/* Quick Metrics Bar */}
+          <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+            <div className={`px-2.5 py-1 rounded-lg border flex items-center gap-1.5 ${activeCandle?.badgeClass || 'bg-slate-800 text-slate-200'}`}>
+              <Activity className="w-3.5 h-3.5" />
+              <span>Current: RSI {rsi.toFixed(1)}</span>
+            </div>
+            <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 flex items-center gap-1.5">
+              <span>Trajectory:</span>
+              <span className={`font-bold ${net10CandleChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {net10CandleChange >= 0 ? '+' : ''}{net10CandleChange} pts
+              </span>
+            </div>
+            <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-400">
+              Range: <span className="text-slate-200">{minRsi10.toFixed(0)}</span> - <span className="text-slate-200">{maxRsi10.toFixed(0)}</span> (avg {avgRsi10.toFixed(0)})
+            </div>
+          </div>
+        </div>
+
+        {/* Visual SVG Waveform Chart */}
+        <div className="bg-slate-950/90 rounded-2xl border border-slate-800/80 p-3 sm:p-4 overflow-x-auto">
+          <div className="min-w-[640px]">
+            <svg viewBox="0 0 740 145" className="w-full h-36 select-none">
+              <defs>
+                <linearGradient id="rsiAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.25" />
+                  <stop offset="50%" stopColor="#06b6d4" stopOpacity="0.15" />
+                  <stop offset="100%" stopColor="#10b981" stopOpacity="0.05" />
+                </linearGradient>
+                <linearGradient id="rsiLineGradient" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#10b981" />
+                  <stop offset="50%" stopColor="#06b6d4" />
+                  <stop offset="100%" stopColor="#f59e0b" />
+                </linearGradient>
+              </defs>
+
+              {/* Horizontal Reference Lines */}
+              {/* Overbought (70) */}
+              <line x1="40" y1="47.4" x2="700" y2="47.4" stroke="#f43f5e" strokeWidth="1" strokeDasharray="4 4" opacity="0.6" />
+              <text x="44" y="43" fill="#f43f5e" fontSize="9" fontWeight="bold" fontFamily="monospace">
+                70 OVERBOUGHT / TAKE-PROFIT EXIT ZONE
+              </text>
+
+              {/* Equilibrium (50) */}
+              <line x1="40" y1="67" x2="700" y2="67" stroke="#64748b" strokeWidth="1" strokeDasharray="3 3" opacity="0.5" />
+              <text x="44" y="63" fill="#94a3b8" fontSize="9" fontFamily="monospace">
+                50 EQUILIBRIUM (MEAN REVERSION PIVOT)
+              </text>
+
+              {/* Oversold (30) */}
+              <line x1="40" y1="86.6" x2="700" y2="86.6" stroke="#10b981" strokeWidth="1" strokeDasharray="4 4" opacity="0.6" />
+              <text x="44" y="83" fill="#10b981" fontSize="9" fontWeight="bold" fontFamily="monospace">
+                30 OVERSOLD / ACCUMULATION BUY ZONE
+              </text>
+
+              {/* Area & Line Paths */}
+              {rsiHistory.length >= 2 && (() => {
+                const step = 640 / (rsiHistory.length - 1);
+                const points = rsiHistory.map((p, idx) => {
+                  const cx = 50 + idx * step;
+                  const cy = 18 + ((100 - p.rsi) / 100) * 98;
+                  return { ...p, cx, cy };
+                });
+
+                const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.cx.toFixed(1)},${p.cy.toFixed(1)}`).join(' ');
+                const areaPath = `${linePath} L ${points[points.length - 1].cx.toFixed(1)},116 L ${points[0].cx.toFixed(1)},116 Z`;
+
+                return (
+                  <g>
+                    <path d={areaPath} fill="url(#rsiAreaGradient)" />
+                    <path d={linePath} fill="none" stroke="url(#rsiLineGradient)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+
+                    {/* Nodes */}
+                    {points.map((p, i) => {
+                      const isSelected = selectedCandleIndex === i || (selectedCandleIndex === null && p.isCurrent);
+                      return (
+                        <g
+                          key={p.index}
+                          className="cursor-pointer transition-all"
+                          onClick={() => setSelectedCandleIndex(i)}
+                        >
+                          {/* Pulsing ring for current candle */}
+                          {p.isCurrent && (
+                            <circle cx={p.cx} cy={p.cy} r="10" fill="#10b981" opacity="0.25" className="animate-ping" />
+                          )}
+
+                          {/* Outer selection ring */}
+                          {isSelected && (
+                            <circle cx={p.cx} cy={p.cy} r="8" fill="none" stroke="#38bdf8" strokeWidth="2" />
+                          )}
+
+                          {/* Center Node */}
+                          <circle
+                            cx={p.cx}
+                            cy={p.cy}
+                            r={p.isCurrent ? 5.5 : 4}
+                            fill={p.zoneColor}
+                            stroke="#020617"
+                            strokeWidth="1.5"
+                          />
+
+                          {/* RSI Value Label above node */}
+                          <text
+                            x={p.cx}
+                            y={p.cy - 7}
+                            textAnchor="middle"
+                            fill={isSelected ? '#38bdf8' : '#e2e8f0'}
+                            fontSize="9.5"
+                            fontWeight={isSelected ? 'bold' : '600'}
+                            fontFamily="monospace"
+                          >
+                            {p.rsi.toFixed(0)}
+                          </text>
+
+                          {/* Time & Candle label below node */}
+                          <text
+                            x={p.cx}
+                            y="130"
+                            textAnchor="middle"
+                            fill={p.isCurrent ? '#34d399' : '#94a3b8'}
+                            fontSize="9"
+                            fontWeight={p.isCurrent ? 'bold' : 'normal'}
+                            fontFamily="monospace"
+                          >
+                            {p.label}
+                          </text>
+                        </g>
+                      );
+                    })}
+                  </g>
+                );
+              })()}
+            </svg>
+          </div>
+        </div>
+
+        {/* 10-Candle Breakdown Grid */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span className="font-semibold text-slate-300">Candle-by-Candle RSI Progression:</span>
+            <span className="text-[11px] font-mono text-slate-500">Click any candle to inspect justification</span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2">
+            {rsiHistory.map((p, idx) => {
+              const isSelected = selectedCandleIndex === idx || (selectedCandleIndex === null && p.isCurrent);
+              return (
+                <button
+                  key={p.index}
+                  type="button"
+                  onClick={() => setSelectedCandleIndex(idx)}
+                  className={`p-2.5 rounded-xl border text-left transition-all relative font-mono ${
+                    isSelected
+                      ? 'bg-slate-800 border-sky-400/80 shadow-md ring-1 ring-sky-400/40 text-white'
+                      : 'bg-slate-950/80 border-slate-800/80 text-slate-300 hover:border-slate-700 hover:bg-slate-900'
+                  }`}
+                >
+                  {p.isCurrent && (
+                    <span className="absolute -top-1.5 -right-1 flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                  )}
+
+                  <div className="flex items-center justify-between text-[10px] text-slate-400">
+                    <span className={p.isCurrent ? 'text-emerald-400 font-bold' : ''}>{p.label}</span>
+                    <span>{p.time}</span>
+                  </div>
+
+                  <div className="mt-1 flex items-baseline justify-between">
+                    <span className="text-sm font-bold text-white tracking-tight">{p.rsi.toFixed(1)}</span>
+                    <span className={`text-[10px] ${p.delta >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {p.delta >= 0 ? '+' : ''}{p.delta.toFixed(1)}
+                    </span>
+                  </div>
+
+                  {/* Micro Progress Bar */}
+                  <div className="w-full bg-slate-900 h-1 rounded-full overflow-hidden mt-1.5">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(100, Math.max(5, p.rsi))}%`,
+                        backgroundColor: p.zoneColor,
+                      }}
+                    />
+                  </div>
+
+                  <div className="mt-1.5 flex items-center justify-between text-[9px]">
+                    <span className={`truncate px-1 py-0.5 rounded text-[8.5px] font-sans font-medium ${
+                      p.zone === 'OVERSOLD'
+                        ? 'bg-emerald-950 text-emerald-300 border border-emerald-800/60'
+                        : p.zone === 'ACCUMULATION'
+                        ? 'bg-teal-950 text-teal-300 border border-teal-800/60'
+                        : p.zone === 'NEUTRAL'
+                        ? 'bg-slate-900 text-cyan-300 border border-cyan-800/40'
+                        : p.zone === 'MOMENTUM'
+                        ? 'bg-amber-950 text-amber-300 border border-amber-800/60'
+                        : 'bg-rose-950 text-rose-300 border border-rose-800/60'
+                    }`}>
+                      {p.zoneLabel}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Trade Entry Justification & Live Guardrails */}
+        {activeCandle && (
+          <div className="bg-slate-950 border border-slate-800/80 rounded-2xl p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800/60 pb-2.5">
+              <div className="flex items-center gap-2 text-xs">
+                <Target className="w-4 h-4 text-emerald-400" />
+                <span className="font-bold text-white">
+                  Trade Entry Rationale for Candle {activeCandle.label} ({activeCandle.time}):
+                </span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${activeCandle.badgeClass}`}>
+                  RSI {activeCandle.rsi.toFixed(1)} · {activeCandle.zoneLabel}
+                </span>
+              </div>
+              <span className="text-xs font-mono text-slate-400">
+                Price at Close: <strong className="text-white">${activeCandle.close.toFixed(2)}</strong>
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed font-sans">
+              <strong>Algorithmic Justification:</strong> {activeCandle.justification}. When running on the 5-minute timeframe, the bot monitors this indicator trajectory to execute disciplined scalps while avoiding volatile fakeouts.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-1 font-mono text-xs">
+              <div className="bg-slate-900/90 border border-slate-800/70 p-2 rounded-xl flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <div>
+                  <div className="text-[10px] text-slate-400">5M Timeframe</div>
+                  <div className="font-bold text-slate-200">5m Interval Active</div>
+                </div>
+              </div>
+
+              <div className="bg-slate-900/90 border border-slate-800/70 p-2 rounded-xl flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <div>
+                  <div className="text-[10px] text-slate-400">Order Sizing</div>
+                  <div className="font-bold text-emerald-400">20% Balance (${(botState.usdtBalance * 0.20).toFixed(2)})</div>
+                </div>
+              </div>
+
+              <div className="bg-slate-900/90 border border-slate-800/70 p-2 rounded-xl flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <div>
+                  <div className="text-[10px] text-slate-400">Take Profit</div>
+                  <div className="font-bold text-emerald-400">+{settings.takeProfitPct}% Target</div>
+                </div>
+              </div>
+
+              <div className="bg-slate-900/90 border border-slate-800/70 p-2 rounded-xl flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <div>
+                  <div className="text-[10px] text-slate-400">Stop Loss</div>
+                  <div className="font-bold text-rose-400">-{settings.stopLossPct}% Auto-Cut</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Cockpit Grid: Indicator HUD + 1-Click Fast Execution */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left: Scalping Indicators & Execution Desk (7 cols) */}
@@ -199,10 +600,10 @@ export const ScalpProCockpit: React.FC<ScalpProCockpitProps> = ({
                 <Activity className="w-4 h-4 text-amber-400" />
                 <h3 className="text-sm font-bold text-white">Live Scalp Momentum Indicators</h3>
               </div>
-              <span className="text-xs font-mono text-slate-400">Pair: {settings.symbol}</span>
+              <span className="text-xs font-mono text-slate-400">Pair: {settings.symbol} · 5m</span>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 font-mono">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono">
               {/* EMA 9 */}
               <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/80">
                 <div className="text-[10px] text-slate-400">EMA 9 (Fast)</div>
@@ -226,10 +627,19 @@ export const ScalpProCockpit: React.FC<ScalpProCockpitProps> = ({
                   }`}
                 >
                   {isEmaBullish ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
-                  {isEmaBullish ? 'BULL IMPULSE' : 'BEAR BIAS'}
+                  {isEmaBullish ? 'BULL' : 'BEAR'}
                 </div>
                 <div className="text-[10px] text-slate-400 mt-0.5">
                   Spread: {isEmaBullish ? '+' : ''}{emaSpreadPct.toFixed(2)}%
+                </div>
+              </div>
+
+              {/* RSI (14) */}
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/80">
+                <div className="text-[10px] text-slate-400">RSI (14 · 5m)</div>
+                <div className="text-base font-bold text-amber-300 mt-0.5">{rsi.toFixed(1)}</div>
+                <div className="text-[10px] text-slate-400 mt-1 truncate">
+                  {rsi <= 35 ? '🟢 Oversold Hook' : rsi <= 50 ? '🟢 Support Dip' : rsi <= 68 ? '🟡 Momentum' : '🔴 Overbought'}
                 </div>
               </div>
             </div>
@@ -366,7 +776,7 @@ export const ScalpProCockpit: React.FC<ScalpProCockpitProps> = ({
               <button
                 id="instant-scalp-long-btn"
                 onClick={() => onInstantTrade('BUY', `⚡ Fast Scalp Long at $${currentPrice.toFixed(2)} (${leverage}x Lev)`)}
-                disabled={botState.usdtBalance < 5}
+                disabled={botState.usdtBalance < 1.0}
                 className="py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-500/20"
               >
                 <ArrowUpRight className="w-4 h-4" />

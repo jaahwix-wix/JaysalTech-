@@ -23,25 +23,27 @@ import { GoLiveGateway } from '@/components/GoLiveGateway';
 import { Bell, Sparkles, CheckCircle2, AlertTriangle, ShieldCheck, Zap } from 'lucide-react';
 
 const DEFAULT_SETTINGS: BotSettings = {
-  strategy: 'GRID',
+  strategy: 'SCALP_PRO',
   symbol: 'SOLUSDT',
   initialBalance: 7.4,
-  orderSizeUsdt: 2.0,
-  takeProfitPct: 2.5,
-  stopLossPct: 3.0,
+  orderSizePct: 20,
+  orderSizeUsdt: 1.48, // Exactly 20% of $7.40
+  takeProfitPct: 2.2, // Profit target > 1.2% threshold
+  stopLossPct: 1.5, // Stop loss risk control
+  timeframe: '5m', // Strict 5-minute timeframe
   gridLevels: 3,
   gridLowerPrice: 0,
   gridUpperPrice: 0,
   dipTriggerPct: 1.5,
   feePct: 0.1, // 0.1% spot fee
-  leverage: 1,
+  leverage: 1, // Spot safe 1x
   scalpEmaFast: 9,
   scalpEmaSlow: 21,
   scalpTrailingStop: true,
 };
 
 const INITIAL_BOT_STATE: BotState = {
-  status: 'STOPPED',
+  status: 'RUNNING', // Automatically start when deployed!
   usdtBalance: 7.4,
   cryptoBalance: 0,
   avgEntryPrice: 0,
@@ -58,7 +60,7 @@ const INITIAL_BOT_STATE: BotState = {
 };
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'simulator' | 'scalp' | 'calculator' | 'auditor' | 'security' | 'golive'>('simulator');
+  const [activeTab, setActiveTab] = useState<'simulator' | 'scalp' | 'calculator' | 'auditor' | 'security' | 'golive'>('scalp');
   const [tickers, setTickers] = useState<MarketTicker[]>([]);
   const [klines, setKlines] = useState<KlinePoint[]>([]);
   const [currentPrice, setCurrentPrice] = useState<number>(185.5);
@@ -76,14 +78,26 @@ export default function Home() {
     }, 4500);
   }, []);
 
-  // Polling market data every 4 seconds
+  // System Auto-Start announcement on initial mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      showToast(
+        'System Auto-Started ⚡',
+        '100% Scalping Engine active (5m interval, 20% balance allocation, TP +2.2%, SL -1.5%)',
+        'success'
+      );
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [showToast]);
+
+  // Polling market data every 4 seconds with 5m interval
   useEffect(() => {
     let active = true;
 
     const poll = async () => {
       if (typeof document !== 'undefined' && document.hidden) return;
       try {
-        const res = await fetch(`/api/market?symbol=${settings.symbol}`);
+        const res = await fetch(`/api/market?symbol=${settings.symbol}&interval=${settings.timeframe || '5m'}`);
         if (!res.ok) return;
         const data = await res.json();
         if (!active) return;
@@ -110,7 +124,7 @@ export default function Home() {
       active = false;
       clearInterval(interval);
     };
-  }, [settings.symbol]);
+  }, [settings.symbol, settings.timeframe]);
 
   // When symbol changes, update price and grid bounds if grid strategy
   const handleSelectSymbol = (newSymbol: SymbolPair) => {
@@ -279,12 +293,13 @@ export default function Home() {
 
   const handleInstantTrade = (type: 'BUY' | 'SELL', customReason?: string) => {
     if (type === 'BUY') {
-      if (botState.usdtBalance < 5) {
-        showToast('Insufficient USDT', 'Need at least 5 USDT to open a position', 'warn');
+      if (botState.usdtBalance < 1.0) {
+        showToast('Insufficient USDT', 'Need at least 1.00 USDT to open a position', 'warn');
         return;
       }
       const lev = Math.max(1, settings.leverage || 1);
-      const margin = Math.min(settings.orderSizeUsdt, botState.usdtBalance);
+      // Always allocate exactly 20% of available balance (minimum $1.00)
+      const margin = Math.min(botState.usdtBalance, Math.max(1.0, Number((botState.usdtBalance * 0.20).toFixed(2))));
       const notional = margin * lev;
       const fee = notional * (settings.feePct / 100);
       const coinBought = (notional - fee) / currentPrice;
@@ -298,7 +313,7 @@ export default function Home() {
         amountUsdt: margin,
         amountCoin: coinBought,
         feeUsdt: fee,
-        reason: customReason || `Manual Buy at $${currentPrice.toFixed(2)} (${lev}x lev)`,
+        reason: customReason || `Manual Scalp Buy at $${currentPrice.toFixed(2)} (20% balance: $${margin.toFixed(2)}, ${lev}x lev)`,
       };
 
       setBotState((prev) => {

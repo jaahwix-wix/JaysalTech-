@@ -58,8 +58,8 @@ export const GoLiveGateway: React.FC<GoLiveGatewayProps> = ({
   const [liveModeEnabled, setLiveModeEnabled] = useState(false);
   const [showKeyGuide, setShowKeyGuide] = useState(true);
 
-  const sharedUrl = 'https://ais-pre-tyvioyoojyalzj27vcukgi-698719656797.europe-west2.run.app';
-  const devUrl = 'https://ais-dev-tyvioyoojyalzj27vcukgi-698719656797.europe-west2.run.app';
+  const sharedUrl = 'https://ais-pre-tqfminfo4nlsgl2th3bmn3-294235567945.europe-west2.run.app';
+  const devUrl = 'https://ais-dev-tqfminfo4nlsgl2th3bmn3-294235567945.europe-west2.run.app';
 
   const fetchStatus = async () => {
     setLoadingStatus(true);

@@ -48,20 +48,33 @@ export function generateGridOrders(
   availableUsdt: number
 ): OpenGridOrder[] {
   const { gridLevels, gridLowerPrice, gridUpperPrice } = settings;
-  const lower = gridLowerPrice > 0 ? gridLowerPrice : currentPrice * 0.96;
-  const upper = gridUpperPrice > 0 ? gridUpperPrice : currentPrice * 1.04;
-  const step = (upper - lower) / (gridLevels - 1);
+  const levels = Math.max(3, gridLevels || 3);
 
-  // Dynamic 20% position size per trade or explicit setting
-  const orderSizePct = settings.orderSizePct ?? 20;
-  const calculatedTranche = Math.max(1.0, Number((availableUsdt * (orderSizePct / 100)).toFixed(2)));
-  const orderSizeUsdt = settings.orderSizeUsdt > 0 ? settings.orderSizeUsdt : calculatedTranche;
+  // Requirement: "Keep grid spacing above 1.2%."
+  const MIN_GRID_SPACING_PCT = 1.25; // strictly > 1.2% to guarantee profit exceeds fees
+
+  let lower = gridLowerPrice > 0 ? gridLowerPrice : currentPrice * 0.95;
+  let upper = gridUpperPrice > 0 ? gridUpperPrice : currentPrice * 1.05;
+  let step = (upper - lower) / (levels - 1);
+  let stepPct = (step / currentPrice) * 100;
+
+  // If spacing is <= 1.2%, automatically expand bounds so spacing is strictly above 1.2%
+  if (stepPct <= 1.2) {
+    step = currentPrice * (MIN_GRID_SPACING_PCT / 100);
+    const halfSpan = (step * (levels - 1)) / 2;
+    lower = Number(Math.max(0.0001, currentPrice - halfSpan).toFixed(4));
+    upper = Number((currentPrice + halfSpan).toFixed(4));
+  }
+
+  // Requirement: Always use 20% of balance per trade (min $1.00)
+  const orderSizePct = 20;
+  const orderSizeUsdt = Math.max(1.0, Number((availableUsdt * (orderSizePct / 100)).toFixed(2)));
 
   const orders: OpenGridOrder[] = [];
   const maxBuyOrders = Math.max(1, Math.floor(availableUsdt / orderSizeUsdt));
   let buyCount = 0;
 
-  for (let i = 0; i < gridLevels; i++) {
+  for (let i = 0; i < levels; i++) {
     const price = lower + i * step;
     const isBuy = price < currentPrice;
 
@@ -115,9 +128,11 @@ export function executeBotTick(
   let executedTrade: ExecutedOrder | null = null;
   const now = Date.now();
 
-  // Dynamic order sizing: Always allocate 20% of current available balance for any trade (min $1.00)
-  const dynamicOrderSize = Math.max(1.0, Number((next.usdtBalance * (orderSizePct / 100)).toFixed(2)));
-  const orderSizeUsdt = configuredOrderSize > 0 ? configuredOrderSize : dynamicOrderSize;
+  // Dynamic order sizing: Always allocate exactly 20% of current available balance for any trade (min $1.00)
+  const orderSizeUsdt = Math.min(
+    next.usdtBalance,
+    Math.max(1.0, Number((next.usdtBalance * ((orderSizePct || 20) / 100)).toFixed(2)))
+  );
 
   // 1. Check Stop-Loss if holding crypto (Spot strategies)
   if (strategy !== 'SCALP_PRO' && next.cryptoBalance > 0 && next.avgEntryPrice > 0 && stopLossPct > 0) {
@@ -245,7 +260,9 @@ export function executeBotTick(
       next.history = [executedTrade, ...next.history.slice(0, 49)];
 
       // Flip the triggered grid order to a corresponding SELL order higher up
-      const gridProfitStep = (order.price * (takeProfitPct / 100));
+      // Enforce spacing strictly above 1.2%
+      const gridProfitStepPct = Math.max(takeProfitPct || 2.0, 1.25);
+      const gridProfitStep = (order.price * (gridProfitStepPct / 100));
       const sellTargetPrice = order.price + gridProfitStep;
 
       const updatedGrid = [...next.openGridOrders];
@@ -289,7 +306,7 @@ export function executeBotTick(
           feeUsdt: fee,
           pnlUsdt: pnl,
           pnlPct: next.avgEntryPrice > 0 ? ((currentPrice - next.avgEntryPrice) / next.avgEntryPrice) * 100 : 0,
-          reason: `Grid Sell limit filled at $${order.price}`,
+          reason: `Grid Sell limit filled at $${order.price} (>1.2% spacing profit)`,
         };
 
         next.usdtBalance += netUsdt;
@@ -305,16 +322,18 @@ export function executeBotTick(
         else next.losingTrades += 1;
         next.history = [executedTrade, ...next.history.slice(0, 49)];
 
-        // Flip back to buy order below
+        // Flip back to buy order below with >1.2% spacing
         const updatedGrid = [...next.openGridOrders];
-        const buyBackPrice = order.price * (1 - (takeProfitPct / 100));
+        const gridSpacingPct = Math.max(takeProfitPct || 2.0, 1.25);
+        const buyBackPrice = order.price * (1 - (gridSpacingPct / 100));
+        const dynamicTranche = Math.max(1.0, Number((next.usdtBalance * 0.20).toFixed(2)));
         updatedGrid[sellOrderIndex] = {
           ...order,
           type: 'BUY',
           price: Number(buyBackPrice.toFixed(4)),
           status: 'PENDING',
-          amountUsdt: orderSizeUsdt,
-          amountCoin: orderSizeUsdt / buyBackPrice,
+          amountUsdt: dynamicTranche,
+          amountCoin: dynamicTranche / buyBackPrice,
         };
         next.openGridOrders = updatedGrid;
         next.lastActionTime = now;
@@ -504,10 +523,40 @@ export function executeBotTick(
       }
     }
 
-    // 2. Scalp Entry: Fast EMA > Slow EMA and not currently holding
-    // Allocate 20% of balance for trade
-    const scalpTradeAllocation = Math.min(next.usdtBalance, Math.max(1.0, Number((next.usdtBalance * (orderSizePct / 100)).toFixed(2))));
-    if (isBullishCross && next.cryptoBalance === 0 && next.usdtBalance >= 1.0) {
+    // 2. Scalp Entry in ANY Market Condition (Bullish Trend, Ranging/Consolidation, or Oversold Dip)
+    // Requirement: Always allocate exactly 20% of available balance per trade
+    const scalpTradeAllocation = Math.min(
+      next.usdtBalance,
+      Math.max(1.0, Number((next.usdtBalance * 0.20).toFixed(2)))
+    );
+
+    const rsi = calculateRsi(closePrices, 14);
+    const emaDiffPct = ((emaFast - emaSlow) / Math.max(emaSlow, 0.0001)) * 100;
+    const cooldownPassed = now - (next.lastActionTime || 0) >= 4000;
+
+    let enterSignal = false;
+    let scalpReason = '';
+
+    if (next.cryptoBalance === 0 && next.usdtBalance >= 1.0 && cooldownPassed) {
+      if (isBullishCross && emaDiffPct >= 0.05) {
+        // Bullish Trend condition: Momentum continuation
+        enterSignal = true;
+        scalpReason = `⚡ Scalp Long: EMA ${settings.scalpEmaFast || 9} > EMA ${settings.scalpEmaSlow || 21} (Bullish 5m Trend, 20% balance)`;
+      } else if (Math.abs(emaDiffPct) < 0.15) {
+        // Ranging / Choppy condition: Local micro-support mean-reversion
+        const isRangeDiscount = rsi <= 52 || currentPrice <= (next.lastCheckPrice || currentPrice);
+        if (isRangeDiscount) {
+          enterSignal = true;
+          scalpReason = `⚡ Scalp Long: 5m Range Consolidation entry at local support (RSI ${rsi.toFixed(0)}, 20% balance)`;
+        }
+      } else if (rsi < 45 || emaDiffPct < -0.15) {
+        // Pullback / Dip condition: Oversold bounce hook
+        enterSignal = true;
+        scalpReason = `⚡ Scalp Long: Oversold bounce hook (RSI ${rsi.toFixed(0)} dip reversal, 20% balance)`;
+      }
+    }
+
+    if (enterSignal) {
       const marginAllocated = scalpTradeAllocation;
       const notionalSize = marginAllocated * lev;
       const fee = notionalSize * (feePct / 100);
@@ -522,7 +571,7 @@ export function executeBotTick(
         amountUsdt: marginAllocated,
         amountCoin: coinBought,
         feeUsdt: fee,
-        reason: `⚡ Scalp Long entry: EMA ${settings.scalpEmaFast || 9} crossed above EMA ${settings.scalpEmaSlow || 21} (${lev}x lev)`,
+        reason: scalpReason,
       };
 
       next.usdtBalance -= marginAllocated;
@@ -536,23 +585,40 @@ export function executeBotTick(
       return { nextState: next, newTrade: executedTrade };
     }
 
-    // 3. Scalp Exit: Take Profit or Stop Loss
+    // 3. Scalp Exit: Take Profit, Trailing Profit Lock, and Stop Loss
     if (next.cryptoBalance > 0 && next.avgEntryPrice > 0) {
       const rawPriceChangePct = ((currentPrice - next.avgEntryPrice) / next.avgEntryPrice) * 100;
       const leveragedGainPct = rawPriceChangePct * lev;
 
-      // Check Scalp Take-Profit Target (e.g. 1.2% price move * lev)
-      const hitTakeProfit = leveragedGainPct >= takeProfitPct;
-      // Check Scalp Stop-Loss Protection (e.g. -0.8% price move * lev)
-      const hitStopLoss = leveragedGainPct <= -stopLossPct;
+      // Minimum take profit threshold strictly above 1.2%
+      const minTakeProfit = Math.max(takeProfitPct || 2.0, 1.25);
+      const hitTakeProfit = leveragedGainPct >= minTakeProfit;
 
-      if (hitTakeProfit || hitStopLoss) {
+      // Trailing stop profit lock: If gain reached >= 1.2% and price pulls back or exceeds target
+      const hitTrailingLock =
+        Boolean(settings.scalpTrailingStop) &&
+        leveragedGainPct >= 1.2 &&
+        (currentPrice < (next.lastCheckPrice || currentPrice) || leveragedGainPct >= minTakeProfit);
+
+      // Stop loss protection
+      const hitStopLoss = leveragedGainPct <= -Math.max(0.5, stopLossPct || 1.5);
+
+      if (hitTakeProfit || hitTrailingLock || hitStopLoss) {
         const notionalGross = next.cryptoBalance * currentPrice;
         const fee = notionalGross * (feePct / 100);
         const marginCost = (next.cryptoBalance * next.avgEntryPrice) / lev;
         const rawProfit = (currentPrice - next.avgEntryPrice) * next.cryptoBalance;
         const netMarginReturned = Math.max(0, marginCost + rawProfit - fee);
         const netPnl = netMarginReturned - marginCost;
+
+        let exitReason = '';
+        if (hitTakeProfit) {
+          exitReason = `🎯 Scalp Take-Profit: +${leveragedGainPct.toFixed(2)}% net target reached (profit secured)`;
+        } else if (hitTrailingLock) {
+          exitReason = `🔒 Trailing Stop Locked: +${leveragedGainPct.toFixed(2)}% profit locked before pullback`;
+        } else {
+          exitReason = `🛑 Scalp Stop-Loss: Protected capital at ${leveragedGainPct.toFixed(2)}% (-${(stopLossPct || 1.5).toFixed(1)}% threshold)`;
+        }
 
         executedTrade = {
           id: `trade-scalp-exit-${now}`,
@@ -565,9 +631,7 @@ export function executeBotTick(
           feeUsdt: fee,
           pnlUsdt: netPnl,
           pnlPct: leveragedGainPct,
-          reason: hitTakeProfit
-            ? `🎯 Scalp TP hit: +${leveragedGainPct.toFixed(1)}% net gain (${lev}x lev)`
-            : `🛑 Scalp SL hit: ${leveragedGainPct.toFixed(1)}% protection (${lev}x lev)`,
+          reason: exitReason,
         };
 
         next.usdtBalance += netMarginReturned;

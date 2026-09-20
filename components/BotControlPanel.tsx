@@ -153,26 +153,30 @@ export const BotControlPanel: React.FC<BotControlPanelProps> = ({
         {/* Order Size per tranche */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-xs text-slate-300">Tranche Size (USDT)</label>
+            <label className="text-xs text-slate-300">Tranche Sizing (20% Balance)</label>
             <span className="text-xs font-mono font-bold text-emerald-400">
-              ${settings.orderSizeUsdt} USDT
+              ${(botState.usdtBalance * ((settings.orderSizePct || 20) / 100)).toFixed(2)} USDT (20%)
             </span>
           </div>
           <input
             id="input-order-size"
             type="range"
-            min="1.0"
-            max="7.4"
-            step="0.5"
-            value={settings.orderSizeUsdt}
+            min="10"
+            max="30"
+            step="5"
+            value={settings.orderSizePct || 20}
             onChange={(e) =>
-              setSettings((prev) => ({ ...prev, orderSizeUsdt: Number(e.target.value) }))
+              setSettings((prev) => ({
+                ...prev,
+                orderSizePct: Number(e.target.value),
+                orderSizeUsdt: Number((botState.usdtBalance * (Number(e.target.value) / 100)).toFixed(2)),
+              }))
             }
             className="w-full accent-emerald-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
           />
           <span className="text-[10px] text-slate-400 flex items-center gap-1 mt-1">
-            <AlertCircle className="w-3 h-3 text-amber-400 shrink-0" />
-            Micro-tranche for $7.40 capital ({Math.floor(7.4 / (settings.orderSizeUsdt || 1))} orders)
+            <AlertCircle className="w-3 h-3 text-emerald-400 shrink-0" />
+            Strict 20% allocation for every trade (min $1.00)
           </span>
         </div>
 
@@ -181,15 +185,15 @@ export const BotControlPanel: React.FC<BotControlPanelProps> = ({
           <div className="flex items-center justify-between mb-1">
             <label className="text-xs text-slate-300">Take-Profit Target</label>
             <span className="text-xs font-mono font-bold text-emerald-400">
-              +{settings.takeProfitPct.toFixed(1)}%
+              +{settings.takeProfitPct.toFixed(1)}% (&gt;1.2%)
             </span>
           </div>
           <input
             id="input-take-profit"
             type="range"
-            min="1.0"
+            min="1.5"
             max="8.0"
-            step="0.5"
+            step="0.1"
             value={settings.takeProfitPct}
             onChange={(e) =>
               setSettings((prev) => ({ ...prev, takeProfitPct: Number(e.target.value) }))
@@ -205,9 +209,9 @@ export const BotControlPanel: React.FC<BotControlPanelProps> = ({
         {settings.strategy === 'GRID' ? (
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs text-slate-300">Grid Levels</label>
+              <label className="text-xs text-slate-300">Grid Levels (Spacing &gt;1.2%)</label>
               <span className="text-xs font-mono font-bold text-emerald-400">
-                {settings.gridLevels} Grids
+                {settings.gridLevels} Grids (&gt;1.25% space)
               </span>
             </div>
             <input
@@ -222,40 +226,28 @@ export const BotControlPanel: React.FC<BotControlPanelProps> = ({
               }
               className="w-full accent-emerald-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
             />
-            <span className="text-[10px] text-slate-400 block mt-1">
-              Each grid: ${((settings.initialBalance || 7.4) / settings.gridLevels).toFixed(2)} capital allocation
+            <span className="text-[10px] text-emerald-400/90 block mt-1">
+              ✓ Spacing strictly maintained above 1.2% for fee clearance
             </span>
           </div>
         ) : settings.strategy === 'SCALP_PRO' ? (
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs text-slate-300">Scalp Leverage Multiplier</label>
-              <span className={`text-xs font-mono font-bold ${(settings.leverage || 1) > 5 ? 'text-rose-400' : 'text-amber-400'}`}>
-                {settings.leverage || 1}x {settings.leverage === 1 ? '(Spot Safe)' : '(Simulated Futures)'}
+              <label className="text-xs text-slate-300">Scalp Timeframe &amp; Mode</label>
+              <span className="text-xs font-mono font-bold text-amber-300">
+                5-Min Candles
               </span>
             </div>
-            <div className="grid grid-cols-5 gap-1 mt-1">
-              {[1, 3, 5, 10, 20].map((lev) => (
-                <button
-                  key={lev}
-                  type="button"
-                  onClick={() => setSettings((p) => ({ ...p, leverage: lev }))}
-                  className={`py-1 text-xs rounded font-mono font-bold border transition-all ${
-                    (settings.leverage || 1) === lev
-                      ? lev > 5
-                        ? 'bg-rose-950 border-rose-500 text-rose-300'
-                        : 'bg-amber-950 border-amber-500 text-amber-300'
-                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
-                  }`}
-                >
-                  {lev}x
-                </button>
-              ))}
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="px-2.5 py-1 rounded bg-slate-900 border border-slate-700 text-xs font-mono text-slate-300">
+                5m Scalp
+              </span>
+              <span className="px-2.5 py-1 rounded bg-emerald-950 border border-emerald-500/40 text-xs font-mono text-emerald-300 font-bold">
+                TP +{settings.takeProfitPct}% / SL -{settings.stopLossPct}%
+              </span>
             </div>
             <span className="text-[10px] text-slate-400 block mt-1">
-              {(settings.leverage || 1) > 1
-                ? `⚠️ Liquidation risk: -${(90 / (settings.leverage || 1)).toFixed(1)}% adverse move wipes position!`
-                : '1x Spot: Zero liquidation risk.'}
+              Active in All Market Conditions (Bullish, Ranging, Oversold)
             </span>
           </div>
         ) : (

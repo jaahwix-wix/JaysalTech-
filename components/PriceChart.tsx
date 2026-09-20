@@ -111,8 +111,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 {selectedSymbol.replace('USDT', '')}
                 <span className="text-slate-400 text-sm font-normal">/USDT</span>
               </span>
-              <span className="text-xs px-2 py-0.5 rounded bg-slate-800 font-mono text-slate-300">
-                15M Interval
+              <span className="text-xs px-2.5 py-0.5 rounded-md bg-emerald-950/80 border border-emerald-500/40 font-mono text-emerald-300 font-semibold flex items-center gap-1.5 shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                {(settings.timeframe || '5m').toUpperCase()} Scalp Timeframe
               </span>
             </div>
             <div className="flex items-baseline gap-2 mt-0.5">
