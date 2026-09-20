@@ -1,0 +1,6 @@
+{
+  "name": "Crypto Bot 50 USDT Strategy & Paper Trader",
+  "description": "A secure algorithmic trading bot simulator, risk calculator, and AI strategy advisor tailored for 50 USDT crypto micro-capital.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
